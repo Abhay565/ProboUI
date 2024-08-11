@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   FlatList,
   Image,
@@ -7,9 +7,17 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Animated,
-  PanResponder,
 } from 'react-native';
+import {
+  GestureHandlerRootView,
+  GestureDetector,
+  Gesture,
+} from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   responsiveFontSize as S,
   responsiveScreenWidth as W,
@@ -19,49 +27,37 @@ import {
 const List = () => {
   const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
-  // State to manage modal visibility
   const [modalVisible, setModalVisible] = useState(false);
   const [toggleButton, setToggleButton] = useState(false);
 
-  const [swiped, setSwiped] = useState(false);
-  const pan = useState(new Animated.ValueXY({ x: 0, y: 0 }))[0];
-
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dx > 0 && gestureState.dx < W(10)) { // Constrain swipe range
-        Animated.spring(pan, {
-          toValue: { x: gestureState.dx, y: 0 },
-          useNativeDriver: false,
-        }).start();
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx > W(40)) { // Trigger swipe success if beyond threshold
-        Animated.spring(pan, {
-          toValue: { x: W(30) - W(40), y: 0 },
-          useNativeDriver: false,
-        }).start();
-        setSwiped(true);
-      } else {
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false,
-        }).start();
-      }
-    },
-  });
-
-  // Function to toggle modal visibility
   const toggleModal = () => {
     setModalVisible(!modalVisible);
   };
 
+  const x = useSharedValue(0);
+
+  const gesture = Gesture.Pan()
+    .onStart((e, c) => {
+      c.startX = x.value;
+    })
+    .onUpdate((e, c) => {
+      x.value = c.startX + e.translationX;
+    })
+    .onEnd(() => {
+      x.value = withTiming(0, {duration: 800});
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{translateX: x.value}],
+    };
+  });
+
   return (
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{flex: 1}}>
       <FlatList
         data={data}
-        renderItem={({ item, index }) => (
+        renderItem={({item, index}) => (
           <View style={styles.card} key={index}>
             <View style={styles.row}>
               <View>
@@ -80,14 +76,18 @@ const List = () => {
             <View style={styles.row}>
               <TouchableOpacity
                 style={styles.yesConatainer}
-                onPress={() => { toggleModal(); setToggleButton(false); }}
-              >
+                onPress={() => {
+                  toggleModal();
+                  setToggleButton(false);
+                }}>
                 <Text style={styles.yesText}>Yes 5.3</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.noConatainer}
-                onPress={() => { toggleModal(); setToggleButton(true); }}
-              >
+                onPress={() => {
+                  toggleModal();
+                  setToggleButton(true);
+                }}>
                 <Text style={styles.noText}>No 4.7</Text>
               </TouchableOpacity>
             </View>
@@ -99,17 +99,14 @@ const List = () => {
         visible={modalVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={toggleModal}
-      >
+        onRequestClose={toggleModal}>
         <TouchableOpacity
           style={styles.modalContainer}
-          onPress={() => toggleModal()}
-        >
+          onPress={() => toggleModal()}>
           <TouchableOpacity
             style={styles.modalContent}
             activeOpacity={1}
-            onPress={() => setModalVisible(true)}
-          >
+            onPress={() => setModalVisible(true)}>
             <View style={styles.row}>
               <Text style={styles.match}>Kolkata to win match v/s Mumbai?</Text>
               <Image
@@ -120,37 +117,33 @@ const List = () => {
             <View style={styles.toggle}>
               <TouchableOpacity
                 style={!toggleButton ? styles.yesToggle : styles.plain}
-                onPress={() => setToggleButton(false)}
-              >
+                onPress={() => setToggleButton(false)}>
                 <Text
                   style={
                     toggleButton
                       ? styles.yesText
-                      : [styles.yesText, { color: '#fff' }]
-                  }
-                >
+                      : [styles.yesText, {color: '#fff'}]
+                  }>
                   Yes 5.3
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={toggleButton ? styles.notoggle : styles.plain}
-                onPress={() => setToggleButton(true)}
-              >
+                onPress={() => setToggleButton(true)}>
                 <Text
                   style={
                     !toggleButton
                       ? styles.noText
-                      : [styles.yesText, { color: '#fff' }]
-                  }
-                >
+                      : [styles.yesText, {color: '#fff'}]
+                  }>
                   No 4.7
                 </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.card2}>
-              <View style={[styles.row, { justifyContent: 'space-between' }]}>
+              <View style={[styles.row, {justifyContent: 'space-between'}]}>
                 <Text style={styles.text}>Price</Text>
-                <View style={{ alignItems: 'center' }}>
+                <View style={{alignItems: 'center'}}>
                   <Text style={styles.price}>
                     {!toggleButton ? '5.3' : '4.7'}
                   </Text>
@@ -158,40 +151,41 @@ const List = () => {
                 </View>
               </View>
               <View style={styles.dotted} />
-              <View style={[styles.row, { justifyContent: 'space-between' }]}>
+              <View style={[styles.row, {justifyContent: 'space-between'}]}>
                 <Text style={styles.text}>{!toggleButton ? '5.3' : '4.7'}</Text>
-                <Text style={[styles.text, { color: 'green' }]}>10</Text>
+                <Text style={[styles.text, {color: 'green'}]}>10</Text>
               </View>
               <View
                 style={[
                   styles.row,
-                  { justifyContent: 'space-between', marginTop: 0 },
-                ]}
-              >
+                  {justifyContent: 'space-between', marginTop: 0},
+                ]}>
                 <Text style={styles.qty}>you put</Text>
                 <Text style={styles.qty}>you get</Text>
               </View>
             </View>
 
-            <View
-              style={
-                toggleButton
-                  ? [styles.swipeContainer, { backgroundColor: 'rgba(200,0,0,0.8)' }]
-                  : [styles.swipeContainer, { backgroundColor: 'rgba(0,50,200,0.8)' }]
-              }
-            >
-              <Animated.View
-                {...panResponder.panHandlers}
-                style={[styles.circle, { transform: [{ translateX: pan.x }] }]}
-              />
-              <Text style={styles.swipeText}>
-                {swiped ? 'Order Success' : 'Swipe to right'}
-              </Text>
-            </View>
+            <GestureDetector gesture={gesture}>
+              <View
+                style={
+                  toggleButton
+                    ? [
+                        styles.swipeContainer,
+                        {backgroundColor: 'rgba(200,0,0,0.8)'},
+                      ]
+                    : [
+                        styles.swipeContainer,
+                        {backgroundColor: 'rgba(0,50,200,0.8)'},
+                      ]
+                }>
+                <Animated.View style={[styles.circle, animatedStyle]} />
+                <Text style={styles.swipeText}>{'Swipe to right'}</Text>
+              </View>
+            </GestureDetector>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -312,7 +306,7 @@ const styles = StyleSheet.create({
     color: 'rgba(0,0,0,.8)',
   },
   dotted: {
-    borderWidth: .6,
+    borderWidth: 0.6,
     borderColor: '#808080',
     borderStyle: 'dotted',
     width: '100%',
@@ -334,7 +328,7 @@ const styles = StyleSheet.create({
     height: W(10),
     borderRadius: W(5),
     backgroundColor: 'rgba(255,255,255,0.9)',
-    position: 'absolute',
+    position: "absolute",
     left: W(2),
   },
   swipeText: {
